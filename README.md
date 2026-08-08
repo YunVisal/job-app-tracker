@@ -3,7 +3,7 @@
 A web app for tracking job applications from "applied" through to "offer" —
 so you always know where you stand and what needs a follow-up.
 
-**Live demo:** 
+**Live demo:** [job-app-tracker-delta.vercel.app](https://job-app-tracker-delta.vercel.app)
 
 ## Features
 - Add applications with company, role, and the date you applied
