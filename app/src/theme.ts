@@ -1,5 +1,18 @@
 'use client';
-import { createTheme } from '@mui/material/styles';
+import { createTheme, PaletteColor, PaletteColorOptions } from '@mui/material/styles';
+
+export type StatusColor = keyof typeof statusPalette;
+/* Module augmentation requires `interface` (type aliases cannot merge), and these
+   declare no members of their own by design. */
+/* eslint-disable @typescript-eslint/no-empty-object-type */
+declare module '@mui/material/styles' {
+    interface Palette extends Record<StatusColor, PaletteColor> { }
+    interface PaletteOptions extends Partial<Record<StatusColor, PaletteColorOptions>> { }
+}
+declare module '@mui/material/Chip' {
+    interface ChipPropsColorOverrides extends Record<StatusColor, true> { }
+}
+/* eslint-enable @typescript-eslint/no-empty-object-type */
 
 const statusPalette = {
     saved: { main: '#64748b', light: '#f1f5f9', dark: '#334155', contrastText: '#fff' },

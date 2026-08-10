@@ -1,3 +1,5 @@
+import type { StatusColor } from "../theme";
+
 const SAVED = 'SAVED';
 const APPLIED = 'APPLIED';
 const SCREENING = 'SCREENING';
@@ -35,4 +37,9 @@ export const APPLICATION_STATUS_CONFIG = {
     REJECTED: { label: 'Rejected', color: 'rejected' },
     WITHDRAWN: { label: 'Withdrawn', color: 'withdrawn' },
     GHOSTED: { label: 'Ghosted', color: 'ghosted' },
-};
+} as const satisfies Record<APPLICATION_STATUS, { label: string; color: StatusColor }>;
+
+export const INITIAL_APPLICATION_STATUS_CONFIG = {
+    SAVED: APPLICATION_STATUS_CONFIG['SAVED'],
+    APPLIED: APPLICATION_STATUS_CONFIG['APPLIED'],
+}

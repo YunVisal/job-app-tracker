@@ -5,5 +5,14 @@ export type JobApplication = {
     company: string;
     role: string;
     status: APPLICATION_STATUS;
-    applied_date: Date;
+    // A `date` column comes back as a calendar-day string ('yyyy-MM-dd'), not a Date.
+    // Null for statuses that predate applying (e.g. SAVED).
+    applied_date: string | null;
+}
+
+export type JobApplicationFormValue = {
+    company: string,
+    role: string,
+    status: string,
+    applied_date: Date | null
 }

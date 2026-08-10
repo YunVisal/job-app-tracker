@@ -1,51 +1,48 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField } from "@mui/material"
+'use client'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Stack, TextField, Typography } from "@mui/material"
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { FC } from "react";
 import { useForm, Controller } from 'react-hook-form'
-import { APPLICATION_STATUS_CONFIG } from "../constants/application-status";
+import { INITIAL_APPLICATION_STATUS_CONFIG } from "../constants/application-status";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { createClient } from "../utils/supabase/client";
-
-type FormValues = {
-    company: string,
-    role: string,
-    status: string,
-    applied_date: Date
-}
+import type { JobApplicationFormValue } from '../types/job-application';
+import { createTracking } from "../actions/application-action";
+import { useSnackbar } from "../hooks/use-snackbar";
 
 interface JobApplicationFormDialog {
     handleClose: () => void;
 }
 
 const JobApplicationFormDialog: FC<JobApplicationFormDialog> = ({ handleClose }) => {
-    const { control, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<FormValues>({
+    const { control, watch, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<JobApplicationFormValue>({
         defaultValues: {
             company: '',
             role: '',
             status: '',
-            applied_date: new Date()
+            applied_date: null
         }
     });
 
-    const createTracking = async (formValue: FormValues) => {
-        const supabase = await createClient();
-        const { error } = await supabase.from('job-application').insert(formValue);
+    const watchStatus = watch('status');
+
+    const { notify } = useSnackbar();
+
+    const submitForm = async (formValue: JobApplicationFormValue) => {
+        const { error } = await createTracking(formValue);
         if (error) {
-            console.error(error);
-            setError('root.serverError', { message: "Something went wrong at our end!" });
+            setError('root.serverError', { message: error })
+            notify(error, "error")
+            return;
         }
+
+        notify("Success!", "success")
         handleClose();
     }
 
-    const renderStatusOption = () => {
-        const options = [];
-        for (let configKey of Object.keys(APPLICATION_STATUS_CONFIG)) {
-            options.push(<MenuItem key={configKey} value={configKey}>
-                {APPLICATION_STATUS_CONFIG[configKey].label}
-            </MenuItem>)
-        }
-        return options;
-    }
+    const renderStatusOption = () =>
+        Object.entries(INITIAL_APPLICATION_STATUS_CONFIG).map(([configKey, { label }]) => (
+            <MenuItem key={configKey} value={configKey}>{label}</MenuItem>
+        ));
 
     return <Dialog
         fullWidth={true}
@@ -55,7 +52,7 @@ const JobApplicationFormDialog: FC<JobApplicationFormDialog> = ({ handleClose })
     >
         <DialogTitle>Track new application</DialogTitle>
         <DialogContent>
-            <Box id="create-form" component={"form"} onSubmit={handleSubmit(createTracking)} sx={{ paddingTop: '1rem' }}>
+            <Box id="create-form" component={"form"} onSubmit={handleSubmit(submitForm)} sx={{ paddingTop: '1rem' }}>
                 <Stack spacing={2}>
                     <Controller
                         name="company"
@@ -120,7 +117,7 @@ const JobApplicationFormDialog: FC<JobApplicationFormDialog> = ({ handleClose })
                             </TextField>
                         }
                     />
-                    <Controller
+                    {watchStatus && watchStatus != 'SAVED' && <Controller
                         name="applied_date"
                         control={control}
                         rules={{
@@ -146,13 +143,14 @@ const JobApplicationFormDialog: FC<JobApplicationFormDialog> = ({ handleClose })
                                 />
                             </LocalizationProvider>
                         }
-                    />
+                    />}
+                    {errors.root?.serverError && <Typography variant="caption" color="error">{errors.root.serverError.message}</Typography>}
                 </Stack>
             </Box>
         </DialogContent>
         <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" form="create-form">
+            <Button disabled={isSubmitting} onClick={handleClose}>Cancel</Button>
+            <Button type="submit" form="create-form" disabled={isSubmitting}>
                 Create
             </Button>
         </DialogActions>

@@ -1,51 +1,46 @@
 'use client'
 import { useState, useMemo, FC } from "react";
 import { Box, Button, Paper, Table, TableBody, TableCell, TableHead, TableRow, TableSortLabel, Typography } from "@mui/material"
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import JobApplicationStatusChip from "./job-application-status-chip";
 import type { JobApplication } from "../types/job-application";
 
-interface HeadCell {
-    disablePadding: boolean;
-    id: string;
-    label: string;
-    numeric: boolean;
-    sortable: boolean;
-}
+type SortableColumn = keyof JobApplication;
+
+// Only sortable columns must name a real field, so `sortable` discriminates the union
+// and narrows `id` to a key the comparator can index.
+type HeadCell =
+    | { id: SortableColumn; label: string; numeric: boolean; sortable: true }
+    | { id: string; label: string; numeric: boolean; sortable: false };
 
 const headCells: HeadCell[] = [
     {
         id: 'company',
         label: 'Company',
-        disablePadding: false,
         numeric: false,
         sortable: false,
     },
     {
         id: 'role',
         label: 'Role',
-        disablePadding: false,
         numeric: false,
         sortable: false,
     },
     {
         id: 'status',
         label: 'Status',
-        disablePadding: false,
         numeric: false,
         sortable: false,
     },
     {
         id: 'applied_date',
         label: 'Applied Date',
-        disablePadding: false,
         numeric: false,
         sortable: true,
     },
     {
         id: 'viewMore',
         label: '',
-        disablePadding: false,
         numeric: false,
         sortable: false,
     }
@@ -63,13 +58,10 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
     return 0;
 }
 
-function getComparator<Key extends keyof any>(
+function getComparator<T>(
     order: Order,
-    orderBy: Key,
-): (
-    a: { [key in Key]: number | string },
-    b: { [key in Key]: number | string },
-) => number {
+    orderBy: keyof T,
+): (a: T, b: T) => number {
     return order === 'desc'
         ? (a, b) => descendingComparator(a, b, orderBy)
         : (a, b) => -descendingComparator(a, b, orderBy);
@@ -82,10 +74,10 @@ interface JobApplicationTableProps {
 const JobApplicationTable: FC<JobApplicationTableProps> = ({ applications }) => {
     // TODO: add pagination
     const [order, setOrder] = useState<Order>('desc');
-    const [orderBy, setOrderBy] = useState<string>('appliedDate');
+    const [orderBy, setOrderBy] = useState<SortableColumn>('applied_date');
 
     const handleRequestSort = (
-        property: string,
+        property: SortableColumn,
     ) => {
         const isAsc = orderBy === property && order === 'asc';
         setOrder(isAsc ? 'desc' : 'asc');
@@ -96,7 +88,7 @@ const JobApplicationTable: FC<JobApplicationTableProps> = ({ applications }) => 
         () =>
             [...applications]
                 .sort(getComparator(order, orderBy)),
-        [order, orderBy],
+        [applications, order, orderBy],
     );
 
     return <Box sx={{ width: '100%' }}>
@@ -112,8 +104,8 @@ const JobApplicationTable: FC<JobApplicationTableProps> = ({ applications }) => 
                                 sortDirection={headCell.sortable && orderBy === headCell.id ? order : false}
                             >
                                 {headCell.sortable ? <TableSortLabel
-                                    active={orderBy == headCell.id}
-                                    direction={orderBy == headCell.id ? order : 'asc'}
+                                    active={orderBy === headCell.id}
+                                    direction={orderBy === headCell.id ? order : 'asc'}
                                     onClick={() => handleRequestSort(headCell.id)}
                                 >
                                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>{headCell.label}</Typography>
@@ -138,7 +130,11 @@ const JobApplicationTable: FC<JobApplicationTableProps> = ({ applications }) => 
                             <TableCell>
                                 <JobApplicationStatusChip status={row.status} />
                             </TableCell>
-                            <TableCell>{format(new Date(row.applied_date), 'yyyy-MM-dd')}</TableCell>
+                            <TableCell>
+                                {/* parseISO reads a date-only string as local time; `new Date(...)`
+                                    would read it as UTC and render the previous day west of UTC. */}
+                                {row.applied_date ? format(parseISO(row.applied_date), 'yyyy-MM-dd') : '—'}
+                            </TableCell>
                             <TableCell><Button>View Detail</Button></TableCell>
                         </TableRow>
                     })}
